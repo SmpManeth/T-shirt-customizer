@@ -157,6 +157,12 @@
       // Select text or image for styling or management
       stage.on("click", (e) => {
         if (e.target === stage) {
+          // Deselect element
+          if (selectedElement) {
+            selectedElement.stroke(null);
+            selectedElement.strokeWidth(0);
+            selectedElement.getLayer().draw();
+          }
           selectedElement = null;
           alert("No element selected!");
         } else if (
@@ -165,15 +171,19 @@
         ) {
           if (e.target.name() === "template") {
             alert("Template images cannot be modified!");
-            selectedElement = null;
-          } else {
-            selectedElement = e.target;
-            selectedElement.stroke("black");
-            selectedElement.strokeWidth(1);
-            // selectedElement.getLayer().draw();
-
-            alert("Element selected!");
+            return;
           }
+          // Highlight the selected element
+          if (selectedElement) {
+            selectedElement.stroke(null); // Remove highlight from previously selected
+            selectedElement.strokeWidth(0);
+          }
+          selectedElement = e.target;
+          selectedElement.stroke("red");
+          selectedElement.strokeWidth(2);
+          selectedElement.getLayer().draw();
+
+          alert("Element selected!");
         }
       });
 
