@@ -17,6 +17,10 @@
     #controls {
       margin-bottom: 20px;
     }
+    #toggle-view {
+      margin-top: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -36,39 +40,62 @@
     </label>
     <br><br>
     <button onclick="exportDesign()">Export Design</button>
+    <br><br>
+    <button id="toggle-view" onclick="toggleView()">Switch to Back View</button>
   </div>
 
   <!-- Canvas for T-Shirt -->
   <div id="tshirt-container" style="width: 500px; height: 600px;"></div>
 
   <script>
-    // Step 1: Initialize Konva Stage and Layer
+    // Step 1: Initialize Konva Stage
     const stage = new Konva.Stage({
-      container: 'tshirt-container', // ID of the container div
+      container: 'tshirt-container',
       width: 500,
       height: 600,
     });
 
-    const layer = new Konva.Layer();
-    stage.add(layer);
+    // Step 2: Create Separate Layers for Front and Back Views
+    const frontLayer = new Konva.Layer();
+    const backLayer = new Konva.Layer();
 
-    // Step 2: Add T-Shirt Background (Template)
-    Konva.Image.fromURL('./tshirt-template.png', (templateImage) => {
-      templateImage.setAttrs({
+    stage.add(frontLayer);
+    stage.add(backLayer);
+
+    // Initially show the front view
+    backLayer.visible(false);
+
+    // Step 3: Add T-Shirt Templates for Front and Back
+    Konva.Image.fromURL('./tshirt-front-template.png', (frontTemplate) => {
+      frontTemplate.setAttrs({
         x: 0,
         y: 0,
         width: 500,
         height: 600,
-        draggable: false, // Prevent moving the template
+        draggable: false,
       });
-      layer.add(templateImage);
-      layer.draw();
+      frontLayer.add(frontTemplate);
+      frontLayer.draw();
     });
 
-    // Step 3: Add Text to Canvas
+    Konva.Image.fromURL('./tshirt-back-template.png', (backTemplate) => {
+      backTemplate.setAttrs({
+        x: 0,
+        y: 0,
+        width: 500,
+        height: 600,
+        draggable: false,
+      });
+      backLayer.add(backTemplate);
+      backLayer.draw();
+    });
+
+    // Step 4: Add Text to Active Layer
     function addText() {
       const textValue = document.getElementById('text-input').value;
       if (!textValue) return alert('Please enter some text.');
+
+      const activeLayer = frontLayer.visible() ? frontLayer : backLayer;
 
       const text = new Konva.Text({
         x: 50,
@@ -76,21 +103,22 @@
         text: textValue,
         fontSize: 24,
         fill: 'black',
-        draggable: true, // Allow users to drag the text
+        draggable: true,
       });
 
-      // Add the text to the layer
-      layer.add(text);
-      layer.draw();
+      activeLayer.add(text);
+      activeLayer.draw();
     }
 
-    // Step 4: Add Uploaded Image to Canvas
+    // Step 5: Add Uploaded Image to Active Layer
     document.getElementById('upload-image').addEventListener('change', function (event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function () {
+        const activeLayer = frontLayer.visible() ? frontLayer : backLayer;
+
         Konva.Image.fromURL(reader.result, (uploadedImage) => {
           uploadedImage.setAttrs({
             x: 100,
@@ -99,20 +127,36 @@
             height: 150,
             draggable: true,
           });
-          layer.add(uploadedImage);
-          layer.draw();
+          activeLayer.add(uploadedImage);
+          activeLayer.draw();
         });
       };
       reader.readAsDataURL(file);
     });
 
-    // Step 5: Export the Design
+    // Step 6: Export the Current Design
     function exportDesign() {
-      const dataURL = stage.toDataURL(); // Export as a base64 image
+      const activeLayer = frontLayer.visible() ? 'front' : 'back';
+      const dataURL = stage.toDataURL();
+
       const link = document.createElement('a');
-      link.download = 'tshirt-design.png';
+      link.download = `tshirt-design-${activeLayer}.png`;
       link.href = dataURL;
-      link.click(); // Trigger download
+      link.click();
+    }
+
+    // Step 7: Toggle Between Front and Back Views
+    function toggleView() {
+      if (frontLayer.visible()) {
+        frontLayer.visible(false);
+        backLayer.visible(true);
+        document.getElementById('toggle-view').innerText = 'Switch to Front View';
+      } else {
+        frontLayer.visible(true);
+        backLayer.visible(false);
+        document.getElementById('toggle-view').innerText = 'Switch to Back View';
+      }
+      stage.draw(); // Re-render the stage
     }
   </script>
 </body>
