@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Shirt Designer</title>
+  <script src="https://cdn.jsdelivr.net/npm/konva@9.0.1/konva.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #tshirt-container {
+      border: 1px solid #ddd;
+      margin: 20px 0;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>T-Shirt Designer</h1>
+
+  <!-- Controls -->
+  <div id="controls">
+    <label>
+      Add Text: 
+      <input type="text" id="text-input" placeholder="Enter text" />
+      <button onclick="addText()">Add</button>
+    </label>
+    <br><br>
+    <label>
+      Upload Image: 
+      <input type="file" id="upload-image" />
+    </label>
+    <br><br>
+    <button onclick="exportDesign()">Export Design</button>
+  </div>
+
+  <!-- Canvas for T-Shirt -->
+  <div id="tshirt-container" style="width: 500px; height: 600px;"></div>
+
+  <script>
+    // Step 1: Initialize Konva Stage and Layer
+    const stage = new Konva.Stage({
+      container: 'tshirt-container', // ID of the container div
+      width: 500,
+      height: 600,
+    });
+
+    const layer = new Konva.Layer();
+    stage.add(layer);
+
+    // Step 2: Add T-Shirt Background (Template)
+    Konva.Image.fromURL('./tshirt-template.png', (templateImage) => {
+      templateImage.setAttrs({
+        x: 0,
+        y: 0,
+        width: 500,
+        height: 600,
+        draggable: false, // Prevent moving the template
+      });
+      layer.add(templateImage);
+      layer.draw();
+    });
+
+    // Step 3: Add Text to Canvas
+    function addText() {
+      const textValue = document.getElementById('text-input').value;
+      if (!textValue) return alert('Please enter some text.');
+
+      const text = new Konva.Text({
+        x: 50,
+        y: 50,
+        text: textValue,
+        fontSize: 24,
+        fill: 'black',
+        draggable: true, // Allow users to drag the text
+      });
+
+      // Add the text to the layer
+      layer.add(text);
+      layer.draw();
+    }
+
+    // Step 4: Add Uploaded Image to Canvas
+    document.getElementById('upload-image').addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        Konva.Image.fromURL(reader.result, (uploadedImage) => {
+          uploadedImage.setAttrs({
+            x: 100,
+            y: 100,
+            width: 150,
+            height: 150,
+            draggable: true,
+          });
+          layer.add(uploadedImage);
+          layer.draw();
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Step 5: Export the Design
+    function exportDesign() {
+      const dataURL = stage.toDataURL(); // Export as a base64 image
+      const link = document.createElement('a');
+      link.download = 'tshirt-design.png';
+      link.href = dataURL;
+      link.click(); // Trigger download
+    }
+  </script>
+</body>
+</html>
