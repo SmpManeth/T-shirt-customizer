@@ -17,9 +17,9 @@
     #controls {
       margin-bottom: 20px;
     }
-    #toggle-view {
-      margin-top: 10px;
-      cursor: pointer;
+    #price-container {
+      font-size: 18px;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -39,13 +39,41 @@
       <input type="file" id="upload-image" />
     </label>
     <br><br>
-    <button onclick="exportDesign()">Export Design</button>
+    <label>Font Size: 
+      <input type="number" id="font-size-input" value="24" />
+    </label>
+    <label>Font Color: 
+      <input type="color" id="font-color-input" value="#000000" />
+    </label>
+    <label>Font Style: 
+      <select id="font-family-input">
+        <option value="Arial">Arial</option>
+        <option value="Comic Sans MS">Comic Sans</option>
+        <option value="Courier New">Courier</option>
+        <option value="Georgia">Georgia</option>
+      </select>
+    </label>
+    <button onclick="applyTextStyles()">Apply Styles</button>
     <br><br>
+    <label>T-Shirt Color: 
+      <input type="color" id="tshirt-color-picker" value="#ffffff" />
+    </label>
+    <br><br>
+    <button onclick="exportDesign()">Export Design</button>
     <button id="toggle-view" onclick="toggleView()">Switch to Back View</button>
+    <button onclick="moveLayerUp()">Move Up</button>
+    <button onclick="moveLayerDown()">Move Down</button>
+    <button onclick="lockLayer()">Lock Layer</button>
+    <button onclick="deleteLayer()">Delete Layer</button>
   </div>
 
   <!-- Canvas for T-Shirt -->
   <div id="tshirt-container" style="width: 500px; height: 600px;"></div>
+
+  <!-- Pricing -->
+  <div id="price-container">
+    <strong>Total Price: </strong><span id="price">0</span> USD
+  </div>
 
   <script>
     // Step 1: Initialize Konva Stage
@@ -66,6 +94,9 @@
     backLayer.visible(false);
 
     // Step 3: Add T-Shirt Templates for Front and Back
+    let frontTemplateImage = null;
+    let backTemplateImage = null;
+
     Konva.Image.fromURL('./tshirt-front-template.png', (frontTemplate) => {
       frontTemplate.setAttrs({
         x: 0,
@@ -73,9 +104,11 @@
         width: 500,
         height: 600,
         draggable: false,
+        name: 'template', // Mark as a template image
       });
       frontLayer.add(frontTemplate);
       frontLayer.draw();
+      frontTemplateImage = frontTemplate;
     });
 
     Konva.Image.fromURL('./tshirt-back-template.png', (backTemplate) => {
@@ -85,12 +118,16 @@
         width: 500,
         height: 600,
         draggable: false,
+        name: 'template', // Mark as a template image
       });
       backLayer.add(backTemplate);
       backLayer.draw();
+      backTemplateImage = backTemplate;
     });
 
-    // Step 4: Add Text to Active Layer
+    // Step 4: Add Text to Canvas
+    let selectedElement = null;
+
     function addText() {
       const textValue = document.getElementById('text-input').value;
       if (!textValue) return alert('Please enter some text.');
@@ -108,9 +145,40 @@
 
       activeLayer.add(text);
       activeLayer.draw();
+      calculatePrice(); // Update the price
     }
 
-    // Step 5: Add Uploaded Image to Active Layer
+    // Select text or image for styling or management
+    stage.on('click', (e) => {
+      if (e.target === stage) {
+        selectedElement = null;
+        alert('No element selected!');
+      } else if (e.target.getClassName() === 'Text' || e.target.getClassName() === 'Image') {
+        if (e.target.name() === 'template') {
+          alert('Template images cannot be modified!');
+          selectedElement = null;
+        } else {
+          selectedElement = e.target;
+          alert('Element selected!');
+        }
+      }
+    });
+
+    // Apply text styles
+    function applyTextStyles() {
+      if (!selectedElement) return alert('Please select a text element first.');
+
+      const fontSize = document.getElementById('font-size-input').value;
+      const fontColor = document.getElementById('font-color-input').value;
+      const fontFamily = document.getElementById('font-family-input').value;
+
+      selectedElement.fontSize(fontSize);
+      selectedElement.fill(fontColor);
+      selectedElement.fontFamily(fontFamily);
+      selectedElement.getLayer().draw();
+    }
+
+    // Step 5: Add Uploaded Image to Canvas
     document.getElementById('upload-image').addEventListener('change', function (event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -129,12 +197,22 @@
           });
           activeLayer.add(uploadedImage);
           activeLayer.draw();
+          calculatePrice(); // Update the price
         });
       };
       reader.readAsDataURL(file);
     });
 
-    // Step 6: Export the Current Design
+    // Step 6: T-Shirt Color Picker
+    document.getElementById('tshirt-color-picker').addEventListener('change', function (event) {
+      const color = event.target.value;
+      frontTemplateImage.fill(color);
+      backTemplateImage.fill(color);
+      frontLayer.draw();
+      backLayer.draw();
+    });
+
+    // Step 7: Export the Current Design
     function exportDesign() {
       const activeLayer = frontLayer.visible() ? 'front' : 'back';
       const dataURL = stage.toDataURL();
@@ -145,7 +223,7 @@
       link.click();
     }
 
-    // Step 7: Toggle Between Front and Back Views
+    // Step 8: Toggle Between Front and Back Views
     function toggleView() {
       if (frontLayer.visible()) {
         frontLayer.visible(false);
@@ -156,7 +234,48 @@
         backLayer.visible(false);
         document.getElementById('toggle-view').innerText = 'Switch to Back View';
       }
-      stage.draw(); // Re-render the stage
+      stage.draw();
+    }
+
+    // Step 9: Layer Management
+    function moveLayerUp() {
+      if (!selectedElement) return alert('Please select an element first.');
+      selectedElement.moveToTop();
+      selectedElement.getLayer().draw();
+    }
+
+    function moveLayerDown() {
+      if (!selectedElement) return alert('Please select an element first.');
+      selectedElement.moveToBottom();
+      selectedElement.getLayer().draw();
+    }
+
+    function lockLayer() {
+      if (!selectedElement) return alert('Please select an element first.');
+      if (selectedElement.name() === 'template') return alert('Template images are already locked!');
+      selectedElement.draggable(false);
+      alert('Layer locked!');
+    }
+
+    function deleteLayer() {
+      if (!selectedElement) return alert('Please select an element first.');
+      if (selectedElement.name() === 'template') return alert('Template images cannot be deleted!');
+      selectedElement.destroy();
+      selectedElement.getLayer().draw();
+      selectedElement = null;
+      alert('Layer deleted!');
+    }
+
+    // Step 10: Real-Time Pricing
+    function calculatePrice() {
+      const textElements = frontLayer.find('Text').length + backLayer.find('Text').length;
+      const imageElements = frontLayer.find('Image').length + backLayer.find('Image').length;
+
+      let price = 10; // Base price
+      price += textElements * 2; // $2 per text
+      price += imageElements * 3; // $3 per image
+
+      document.getElementById('price').innerText = price;
     }
   </script>
 </body>
